@@ -1,0 +1,13 @@
+# configurazione reale: contiene percorsi, host e token
+config.env
+
+# log, file temporanei e copie di sicurezza
+*.log
+*.bak
+*.new
+*.tmp
+
+# sistema operativo / editor
+.DS_Store
+._*
+*.swp
