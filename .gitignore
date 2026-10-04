@@ -11,3 +11,7 @@ config.env
 .DS_Store
 ._*
 *.swp
+
+# stato runtime
+.last_run
+.backup.lock

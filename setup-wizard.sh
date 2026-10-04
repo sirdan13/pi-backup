@@ -295,6 +295,7 @@ done
   echo "NOTIFY_CHAT_ID=\"${NOTIFY_CHAT_ID:-}\""
   echo ""
   echo "BACKUP_PREFIX=\"${BACKUP_PREFIX:-backup}\""
+  echo "MIN_INTERVAL_HOURS=${MIN_INTERVAL_HOURS:-12}"
   echo "LOG_FILE=\"${LOG_FILE:-$SCRIPT_DIR/backup.log}\""
   echo ""
   echo "PROMOTE_TO_PARENT=(${PROMOTE_TO_PARENT[*]:-backend api src})"

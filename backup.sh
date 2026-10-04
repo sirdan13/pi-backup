@@ -223,6 +223,12 @@ backup_ssh_destination() {
 # 3. DESTINAZIONE tipo: local (cartella locale — USB, disco, o cartella
 #    sincronizzata da un client esterno tipo Dropbox/Nextcloud/ecc.)
 # =============================================================================
+zip_project() {
+  zip -r -q "$@"; local rc=$?
+  if [[ $rc -eq 18 ]]; then log "  ATTENZIONE: file spariti durante lo zip (ignorato)"; return 0; fi
+  return $rc
+}
+
 backup_local_destination() {
   local id="$1"
   local name; name=$(get_var "$id" NAME "$id")
@@ -254,7 +260,7 @@ backup_local_destination() {
   for src in "${PROJECTS[@]}"; do
     if [[ -d "$src" ]]; then
       local pname; pname=$(basename "$src")
-      zip -r -q "$dest/projects/${pname}.zip" "$src" "${ZIP_EXCLUDES[@]}" \
+      zip_project "$dest/projects/${pname}.zip" "$src" "${ZIP_EXCLUDES[@]}" \
         && log "  [$name] -> ${pname}.zip" \
         || { log "  ERRORE [$name] su $pname"; STATUS_OK=false; }
     fi
@@ -339,6 +345,28 @@ send_notification() {
 # =============================================================================
 # ESECUZIONE
 # =============================================================================
+# --- protezione: lock + intervallo minimo tra due backup ---
+# Salta i run ravvicinati (riavvii, recuperi del timer, avvii doppi).
+# Per forzare: sudo FORCE=1 bash backup.sh
+STATE_DIR="${STATE_DIR:-$SCRIPT_DIR}"
+LAST_RUN_FILE="$STATE_DIR/.last_run"
+MIN_INTERVAL_HOURS="${MIN_INTERVAL_HOURS:-12}"
+
+exec 9>"$STATE_DIR/.backup.lock"
+if ! flock -n 9; then
+  log "Backup già in esecuzione — salto."
+  exit 0
+fi
+
+if [[ "${FORCE:-0}" != 1 && -f "$LAST_RUN_FILE" ]]; then
+  age=$(( $(date +%s) - $(stat -c %Y "$LAST_RUN_FILE") ))
+  if (( age < MIN_INTERVAL_HOURS * 3600 )); then
+    log "Ultimo backup avviato $((age / 60)) min fa (minimo ${MIN_INTERVAL_HOURS}h) — salto."
+    exit 0
+  fi
+fi
+touch "$LAST_RUN_FILE"
+
 log "=== Backup avviato — $TIMESTAMP ==="
 
 dump_databases

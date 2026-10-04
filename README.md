@@ -267,3 +267,26 @@ Un backup non provato non è un backup: prova un ripristino dopo la prima instal
 - `config.env` ha permessi `600` (li imposta `install.sh`) e non va mai committato.
 - Le credenziali del dump MySQL stanno in un file separato (`DB_CREDENTIALS_FILE`), mai in `config.env`.
 - Il token del bot Telegram, se usato, è in `config.env`: trattalo come una password.
+
+## Esecuzioni ravvicinate
+
+`backup.sh` salta qualsiasi esecuzione partita meno di `MIN_INTERVAL_HOURS` ore
+(default 12) dopo l'ultima e impedisce due backup in parallelo (lock). Protegge
+da riavvii frequenti, recuperi di `Persistent=true` e avvii doppi. Un'esecuzione
+saltata esce con codice 0 e scrive una riga nel log.
+
+Per forzare un backup: `sudo FORCE=1 bash backup.sh`
+
+Il file di stato `.last_run` sta nella cartella del progetto ed è ignorato da git.
+
+## Persistent e riavvii frequenti
+
+`Persistent=true` recupera le esecuzioni perse quando la macchina era spenta.
+Su macchine che si riavviano spesso o senza orologio hardware (es. Raspberry Pi)
+l'ora salta al boot e systemd puo lanciare un backup extra dopo l'avvio.
+In quel caso rispondi n alla domanda di install.sh, oppure imposta
+`Persistent=false` in /etc/systemd/system/autobackup.timer e lancia
+`sudo systemctl daemon-reload && sudo systemctl restart autobackup.timer`.
+
+`MIN_INTERVAL_HOURS` limita comunque i danni: nessun backup parte se
+l'ultimo e' piu recente dell'intervallo.

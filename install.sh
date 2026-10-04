@@ -222,6 +222,9 @@ if command -v systemd-analyze >/dev/null 2>&1; then
   systemd-analyze calendar --iterations=3 "$CALENDAR" 2>/dev/null | grep -E "Next elapse|Iteration" | sed 's/^/     /'
 fi
 
+PERSISTENT=false
+if ask_yn "Recuperare le esecuzioni perse se la macchina era spenta (Persistent)?" s; then PERSISTENT=true; fi
+
 if [[ -e "$SERVICE_FILE" || -e "$TIMER_FILE" ]]; then
   if ! grep -qs "$MARKER" "$SERVICE_FILE" 2>/dev/null; then
     warn "$SERVICE_FILE esiste già e NON è stato creato da questo installer."
@@ -250,7 +253,7 @@ Description=Pianificazione di ${UNIT_NAME}.service
 
 [Timer]
 OnCalendar=$CALENDAR
-Persistent=true
+Persistent=${PERSISTENT}
 RandomizedDelaySec=300
 Unit=${UNIT_NAME}.service
 
@@ -275,6 +278,7 @@ systemctl list-timers "${UNIT_NAME}.timer" --no-pager 2>/dev/null | sed 's/^/   
 section "5/5 Backup di prova"
 # =============================================================================
 if [[ "$RUN_TEST" == true ]] && ask_yn "Eseguire subito un backup di prova?" s; then
+  $SUDO rm -f "$SCRIPT_DIR/.last_run"
   info "Avvio ${UNIT_NAME}.service (può richiedere qualche minuto)..."
   if $SUDO systemctl start "${UNIT_NAME}.service"; then
     ok "Backup di prova completato"
