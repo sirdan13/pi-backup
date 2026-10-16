@@ -271,7 +271,7 @@ Un backup non provato non è un backup: prova un ripristino dopo la prima instal
 ## Esecuzioni ravvicinate
 
 `backup.sh` salta qualsiasi esecuzione partita meno di `MIN_INTERVAL_HOURS` ore
-(default 12) dopo l'ultima e impedisce due backup in parallelo (lock). Protegge
+(default 12) dopo il backup riuscito piu recente e impedisce due backup in parallelo (lock). Protegge
 da riavvii frequenti, recuperi di `Persistent=true` e avvii doppi. Un'esecuzione
 saltata esce con codice 0 e scrive una riga nel log.
 
@@ -290,3 +290,14 @@ In quel caso rispondi n alla domanda di install.sh, oppure imposta
 
 `MIN_INTERVAL_HOURS` limita comunque i danni: nessun backup parte se
 l'ultimo e' piu recente dell'intervallo.
+
+## Avvio dopo reboot
+
+Il backup salta se il sistema e acceso da meno di MIN_UPTIME_MINUTES minuti
+(default 15). Protegge dai backup lanciati subito dopo un riavvio, per esempio
+quando l ora salta al boot su macchine senza orologio hardware.
+
+Un backup fallito non aggiorna .last_run, quindi non blocca i tentativi successivi.
+
+La cartella di autobackup e esclusa dalla discovery perche contiene config.env
+(token e percorsi). Per includerla: BACKUP_SELF=true in config.env.

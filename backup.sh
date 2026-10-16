@@ -103,6 +103,7 @@ discover_projects() {
       fi
     done
 
+    [[ "${BACKUP_SELF:-false}" != true && "$dir" == "$SCRIPT_DIR" ]] && continue
     local skip=false
     for excl in "${EXCLUDE_PROJECT_PATHS[@]}"; do
       [[ -n "$excl" && "$dir" == *"$excl"* ]] && skip=true && break
@@ -352,6 +353,12 @@ STATE_DIR="${STATE_DIR:-$SCRIPT_DIR}"
 LAST_RUN_FILE="$STATE_DIR/.last_run"
 MIN_INTERVAL_HOURS="${MIN_INTERVAL_HOURS:-12}"
 
+MIN_UPTIME_MINUTES="${MIN_UPTIME_MINUTES:-15}"
+if [[ "${FORCE:-0}" != 1 ]] && (( $(cut -d. -f1 /proc/uptime) < MIN_UPTIME_MINUTES * 60 )); then
+  log "Sistema acceso da meno di ${MIN_UPTIME_MINUTES} min (avvio dopo reboot) — salto."
+  exit 0
+fi
+
 exec 9>"$STATE_DIR/.backup.lock"
 if ! flock -n 9; then
   log "Backup già in esecuzione — salto."
@@ -361,11 +368,10 @@ fi
 if [[ "${FORCE:-0}" != 1 && -f "$LAST_RUN_FILE" ]]; then
   age=$(( $(date +%s) - $(stat -c %Y "$LAST_RUN_FILE") ))
   if (( age < MIN_INTERVAL_HOURS * 3600 )); then
-    log "Ultimo backup avviato $((age / 60)) min fa (minimo ${MIN_INTERVAL_HOURS}h) — salto."
+    log "Ultimo backup riuscito $((age / 60)) min fa (minimo ${MIN_INTERVAL_HOURS}h) — salto."
     exit 0
   fi
 fi
-touch "$LAST_RUN_FILE"
 
 log "=== Backup avviato — $TIMESTAMP ==="
 
@@ -401,4 +407,5 @@ send_notification
 
 [[ -n "$DB_DUMP_TMP_DIR" && -d "$DB_DUMP_TMP_DIR" ]] && rm -rf "$DB_DUMP_TMP_DIR"
 
-[[ "$STATUS_OK" == true ]] && exit 0 || exit 1
+if [[ "$STATUS_OK" == true ]]; then touch "$LAST_RUN_FILE"; exit 0; fi
+exit 1
